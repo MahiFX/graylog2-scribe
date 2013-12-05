@@ -1,0 +1,110 @@
+#!/usr/bin/ruby
+
+# Simple command line tool for decoding GELF-format messages output by Scribe to a File Store.
+#
+# @version: 1.0
+# @author: James Furness
+#
+
+require 'rubygems'
+require 'json'
+require 'date'
+require 'optparse'
+require 'optparse/time'
+
+options = {}
+options[:fields] = []
+
+opt_parser = OptionParser.new do |opt|
+  opt.banner = "Usage: gelfviewer [OPTIONS]"
+  opt.separator  "Options"
+
+  opt.on("-f","--from TIME",Time,"Start time") do |from|
+    options[:from] = from
+  end
+
+  opt.on("-t","--to TIME",Time,"End time") do |to|
+    options[:to] = to
+  end
+
+  opt.on("-i", "--field NAME","Print field") do |field|
+    options[:fields] << "_#{field}"
+  end
+
+  opt.on_tail("-h","--help","Show this message") do
+    puts opt_parser
+    exit
+  end
+end
+
+opt_parser.parse!
+
+def fromSyslogSeverity(level)
+  case level
+  when 1
+    return "ALERT"
+  when 3
+    return "ERROR"
+  when 4
+    return "WARN"
+  when 6
+    return "INFO"
+  when 7
+    return "DEBUG"
+  else
+    return level.to_s
+  end
+end
+
+def ljustslice(str, len)
+  return nil if str.nil?   
+  
+  if str.length < len
+    return str.ljust(len)
+  elsif str.length > len
+    return str[-len..-1]
+  else
+    return str
+  end
+end
+
+def rsliceclass(str, len)
+  return nil if str.nil?   
+  
+  while str.length > len do
+    break if str.sub!(/([a-z])[a-z]+\./, '\1.').nil?
+  end
+
+  return ljustslice(str, len)
+end
+
+STDIN.each do |line|
+  begin
+    line.strip!
+    
+    next if line.empty?
+  
+    json = JSON.parse(line)
+    time = Time.at(json['timestamp'].to_f)
+
+    next if options.has_key?(:from) and options[:from] > time
+    next if options.has_key?(:to) and options[:to] < time
+
+    out = time.strftime('%FT%T') << ',' << (time.usec / 1000.0).round.to_s.ljust(3, '0')
+    out << ' ' << ljustslice(fromSyslogSeverity(json['level']), 5)
+    out << ' ' << ljustslice(json['_thread'], 20)
+    out << ' ' << rsliceclass(json['_logger'], 30)
+
+    options[:fields].each do |f|
+      value = json[f]
+      value = "" if value.nil?
+      out << ' ' << value.ljust(10)
+    end
+
+    out << json['full_message']
+
+    puts out
+  rescue
+    puts "Parsing '#{line}' failed ", $!
+  end
+end
