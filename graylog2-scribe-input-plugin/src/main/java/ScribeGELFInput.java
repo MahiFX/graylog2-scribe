@@ -1,5 +1,3 @@
-package org.graylog2.scribe.inputplugin;
-
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TProtocolFactory;
 import org.apache.thrift.server.THsHaServer;

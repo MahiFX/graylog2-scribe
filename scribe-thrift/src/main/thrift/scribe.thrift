@@ -1,4 +1,4 @@
-#!/usr/local/bin/thrift --cpp --php
+#!/opt/local/bin/thrift --gen java -out ../java
 
 ##  Copyright (c) 2007-2008 Facebook
 ##

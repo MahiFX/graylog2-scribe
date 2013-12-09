@@ -1,5 +1,3 @@
-package org.graylog2.scribe.inputplugin;
-
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 import org.apache.thrift.TException;
